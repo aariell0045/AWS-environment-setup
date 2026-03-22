@@ -35,4 +35,4 @@ key_pair_name = "my-key"
 # The filter matches subnet Name tags containing this string.
 # Check your Horizon account's subnet names in the VPC console and adjust if needed.
 # Common patterns: "Private", "private", "compute"
-private_subnet_tag_filter = "rivate"
+private_subnet_tag_filter = "SPOKE-Networking-922384915313-Stack/VPC/VPC/spokeSubnet1"
