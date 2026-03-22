@@ -5,12 +5,12 @@
 
 output "dc_instance_id" {
   description = "EC2 instance ID (use this for SSM session)"
-  value       = try(aws_instance.dc[0].id, null)
+  value       = aws_instance.dc.id
 }
 
 output "dc_private_ip" {
   description = "Private IP of the domain controller"
-  value       = try(aws_instance.dc[0].private_ip, null)
+  value       = aws_instance.dc.private_ip
 }
 
 output "dc_hostname" {
@@ -52,12 +52,12 @@ output "security_group_id" {
 
 output "ssm_rdp_command" {
   description = "Start an SSM port-forwarding session for RDP"
-  value       = var.instance_enabled ? "aws ssm start-session --target ${aws_instance.dc[0].id} --document-name AWS-StartPortForwardingSession --parameters portNumber=3389,localPortNumber=13389 --region il-central-1" : null
+  value       = "aws ssm start-session --target ${aws_instance.dc.id} --document-name AWS-StartPortForwardingSession --parameters portNumber=3389,localPortNumber=13389 --region il-central-1"
 }
 
 output "ssm_winrm_command" {
   description = "Start an SSM port-forwarding session for WinRM (Ansible)"
-  value       = var.instance_enabled ? "aws ssm start-session --target ${aws_instance.dc[0].id} --document-name AWS-StartPortForwardingSession --parameters portNumber=5986,localPortNumber=15986 --region il-central-1" : null
+  value       = "aws ssm start-session --target ${aws_instance.dc.id} --document-name AWS-StartPortForwardingSession --parameters portNumber=5986,localPortNumber=15986 --region il-central-1"
 }
 
 output "ansible_inventory_snippet" {

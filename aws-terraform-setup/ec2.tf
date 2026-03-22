@@ -32,7 +32,6 @@ data "aws_ami" "windows_2022" {
 # -----------------------------------------------------------------------------
 
 resource "aws_instance" "dc" {
-  count = var.instance_enabled ? 1 : 0
 
   ami                    = data.aws_ami.windows_2022.id
   instance_type          = var.dc_instance_type
@@ -83,9 +82,7 @@ resource "aws_instance" "dc" {
 # -----------------------------------------------------------------------------
 
 resource "aws_ebs_volume" "ntds" {
-  count = var.instance_enabled ? 1 : 0
-
-  availability_zone = aws_instance.dc[0].availability_zone
+  availability_zone = aws_instance.dc.availability_zone
   size              = var.ntds_volume_size
   type              = "gp3"
   encrypted         = true
@@ -94,10 +91,8 @@ resource "aws_ebs_volume" "ntds" {
 }
 
 resource "aws_volume_attachment" "ntds" {
-  count = var.instance_enabled ? 1 : 0
-
   device_name  = "/dev/xvdf"
-  volume_id    = aws_ebs_volume.ntds[0].id
-  instance_id  = aws_instance.dc[0].id
+  volume_id    = aws_ebs_volume.ntds.id
+  instance_id  = aws_instance.dc.id
   force_detach = false
 }
