@@ -60,6 +60,10 @@ New-NetFirewallRule `
     -Action Allow `
     -Profile Any
 
+# Enable RDP
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
 # WinRM settings
 Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
 Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $false
