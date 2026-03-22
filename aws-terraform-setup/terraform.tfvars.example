@@ -1,0 +1,30 @@
+# =============================================================================
+# terraform.tfvars.example — Horizon Landing Zone
+# Copy to terraform.tfvars and fill in your values.
+#
+# NOTE: Region is hardcoded to il-central-1 in main.tf.
+# NOTE: VPC/subnets are discovered automatically from the Horizon LZ.
+# =============================================================================
+
+environment = "lab"
+
+# --- Domain ---
+domain_name    = "corp.local"
+domain_netbios = "CORP"
+dc_hostname    = "DC01"
+
+# --- EC2 ---
+dc_instance_type = "t3.medium"    # 2 vCPU, 4 GB — cheapest practical for AD
+ntds_volume_size = 20
+
+# Key pair — must already exist in il-central-1.
+# Only needed to decrypt the initial Administrator password from EC2 console.
+# If you don't have one, create it first:
+#   aws ec2 create-key-pair --key-name my-key --region il-central-1 --query 'KeyMaterial' --output text > my-key.pem
+key_pair_name = "my-key"
+
+# --- Subnet discovery ---
+# The filter matches subnet Name tags containing this string.
+# Check your Horizon account's subnet names in the VPC console and adjust if needed.
+# Common patterns: "Private", "private", "compute"
+private_subnet_tag_filter = "rivate"
