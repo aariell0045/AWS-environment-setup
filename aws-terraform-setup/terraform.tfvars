@@ -29,7 +29,7 @@ ntds_volume_size = 10
 # Only needed to decrypt the initial Administrator password from EC2 console.
 # If you don't have one, create it first:
 #   aws ec2 create-key-pair --key-name my-key --region il-central-1 --query 'KeyMaterial' --output text > my-key.pem
-key_pair_name = "my-key"
+key_pair_name = "tomerandariel"
 
 # --- Subnet discovery ---
 # The filter matches subnet Name tags containing this string.
