@@ -78,14 +78,14 @@ resource "aws_vpc_security_group_ingress_rule" "rpc_dynamic" {
   cidr_ipv4         = local.vpc_cidr
 }
 
-# RDP within VPC (for SSM port forwarding target)
+# RDP from anywhere (public access)
 resource "aws_vpc_security_group_ingress_rule" "rdp" {
   security_group_id = aws_security_group.dc.id
-  description       = "RDP within VPC (SSM port forward)"
+  description       = "RDP from anywhere"
   from_port         = 3389
   to_port           = 3389
   ip_protocol       = "tcp"
-  cidr_ipv4         = local.vpc_cidr
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 # --- Egress: allow all outbound (goes through Horizon firewall → NAT → IGW) ---

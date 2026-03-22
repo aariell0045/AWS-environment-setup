@@ -13,6 +13,11 @@ output "dc_private_ip" {
   value       = aws_instance.dc.private_ip
 }
 
+output "dc_public_ip" {
+  description = "Public IP of the domain controller (use this for RDP)"
+  value       = aws_instance.dc.public_ip
+}
+
 output "dc_hostname" {
   description = "Windows hostname"
   value       = var.dc_hostname

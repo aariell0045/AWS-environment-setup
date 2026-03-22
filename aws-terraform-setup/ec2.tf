@@ -39,8 +39,7 @@ resource "aws_instance" "dc" {
   vpc_security_group_ids = [aws_security_group.dc.id]
   iam_instance_profile   = aws_iam_instance_profile.dc.name
 
-  # No public IP — Horizon handles egress centrally
-  associate_public_ip_address = false
+  associate_public_ip_address = true
 
   # Key pair — optional, only for decrypting initial Administrator password
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
