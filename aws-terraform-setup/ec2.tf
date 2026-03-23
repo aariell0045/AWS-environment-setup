@@ -37,7 +37,6 @@ resource "aws_instance" "dc" {
   instance_type          = var.dc_instance_type
   subnet_id              = data.aws_subnet.dc.id
   vpc_security_group_ids = [aws_security_group.dc.id]
-  iam_instance_profile   = aws_iam_instance_profile.dc.name
 
   associate_public_ip_address = true
 
