@@ -74,7 +74,7 @@ resource "aws_instance" "dc" {
   }
 
   lifecycle {
-    ignore_changes = [ami, user_data]
+    ignore_changes = [ami]
   }
 }
 
