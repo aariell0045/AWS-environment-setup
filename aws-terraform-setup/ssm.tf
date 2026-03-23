@@ -7,7 +7,7 @@
 resource "random_password" "dsrm" {
   length           = 24
   special          = true
-  override_special = "!@#$%^&*"
+  override_special = "!@#$%^*"
 }
 
 resource "aws_ssm_parameter" "dsrm_password" {

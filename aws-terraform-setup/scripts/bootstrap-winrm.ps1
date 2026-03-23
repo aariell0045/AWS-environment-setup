@@ -41,7 +41,7 @@ Install-WindowsFeature -Name AD-Domain-Services, DNS -IncludeManagementTools
 Write-Output "AD DS and DNS roles installed."
 
 # --- Promote to Domain Controller (new forest) ---
-$dsrmPassword = ConvertTo-SecureString "${dsrm_password}" -AsPlainText -Force
+$dsrmPassword = ConvertTo-SecureString '${dsrm_password}' -AsPlainText -Force
 
 Install-ADDSForest `
     -DomainName "${domain_name}" `
