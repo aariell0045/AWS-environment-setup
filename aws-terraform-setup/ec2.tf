@@ -37,6 +37,7 @@ resource "aws_instance" "dc" {
   instance_type          = var.dc_instance_type
   subnet_id              = data.aws_subnet.dc.id
   vpc_security_group_ids = [aws_security_group.dc.id]
+  iam_instance_profile   = aws_iam_instance_profile.dc.name
 
   associate_public_ip_address = true
 
@@ -61,7 +62,10 @@ resource "aws_instance" "dc" {
   }
 
   user_data = templatefile("${path.module}/scripts/bootstrap-winrm.ps1", {
-    hostname = var.dc_hostname
+    hostname       = var.dc_hostname
+    domain_name    = var.domain_name
+    domain_netbios = var.domain_netbios
+    dsrm_password  = random_password.dsrm.result
   })
 
   tags = {

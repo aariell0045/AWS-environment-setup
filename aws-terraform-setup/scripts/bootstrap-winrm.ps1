@@ -1,10 +1,11 @@
 <powershell>
 # =============================================================================
-# Bootstrap — MINIMAL. Only does what Ansible can't do before connecting:
+# Bootstrap — Sets up the machine as an AD Domain Controller + DNS Server
 #   1. Set hostname
-#   2. Enable WinRM over HTTPS (Ansible connects via SSM port forwarding)
-#   3. Initialize the NTDS data disk (D:)
-# Everything else (AD DS install, DC promotion) is Ansible's job.
+#   2. Initialize the NTDS data disk (D:)
+#   3. Enable RDP
+#   4. Install AD DS + DNS roles
+#   5. Promote to Domain Controller (new forest)
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -30,50 +31,29 @@ if ($disk) {
     Write-Output "No raw disk found — NTDS volume may already be initialized."
 }
 
-# --- Configure WinRM HTTPS ---
-# Self-signed cert for WinRM transport (Ansible connects via SSM port forward to localhost:5986)
-$cert = New-SelfSignedCertificate `
-    -DnsName $targetName, "localhost" `
-    -CertStoreLocation "Cert:\LocalMachine\My" `
-    -NotAfter (Get-Date).AddYears(3)
-
-# Remove existing HTTPS listener if any
-Get-ChildItem WSMan:\localhost\Listener | Where-Object {
-    $_.Keys -contains "Transport=HTTPS"
-} | ForEach-Object {
-    Remove-Item -Path $_.PSPath -Recurse -Force
-}
-
-# Create HTTPS listener
-New-Item -Path WSMan:\localhost\Listener `
-    -Transport HTTPS `
-    -Address * `
-    -CertificateThumbPrint $cert.Thumbprint `
-    -Force
-
-# Firewall rule for WinRM HTTPS
-New-NetFirewallRule `
-    -DisplayName "WinRM HTTPS (Ansible)" `
-    -Direction Inbound `
-    -LocalPort 5986 `
-    -Protocol TCP `
-    -Action Allow `
-    -Profile Any
-
-# Enable RDP
+# --- Enable RDP ---
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+Write-Output "RDP enabled."
 
-# WinRM settings
-Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
-Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $false
-Set-Item WSMan:\localhost\MaxTimeoutms -Value 1800000
+# --- Install AD DS and DNS roles ---
+Install-WindowsFeature -Name AD-Domain-Services, DNS -IncludeManagementTools
+Write-Output "AD DS and DNS roles installed."
 
-Restart-Service WinRM
+# --- Promote to Domain Controller (new forest) ---
+$dsrmPassword = ConvertTo-SecureString "${dsrm_password}" -AsPlainText -Force
 
-Write-Output "WinRM HTTPS listener configured."
+Install-ADDSForest `
+    -DomainName "${domain_name}" `
+    -DomainNetbiosName "${domain_netbios}" `
+    -SafeModeAdministratorPassword $dsrmPassword `
+    -DatabasePath "D:\NTDS" `
+    -LogPath "D:\NTDS" `
+    -SysvolPath "D:\SYSVOL" `
+    -InstallDns:$true `
+    -NoRebootOnCompletion:$false `
+    -Force:$true
 
-# --- Reboot to apply hostname ---
+Write-Output "DC promotion initiated. Machine will reboot automatically."
 Stop-Transcript
-Restart-Computer -Force
 </powershell>
