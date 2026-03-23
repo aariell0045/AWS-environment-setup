@@ -8,16 +8,16 @@
 #   5. Promote to Domain Controller (new forest)
 # =============================================================================
 
-$ErrorActionPreference = "Stop"
-Start-Transcript -Path "C:\bootstrap.log" -Append
+$ErrorActionPreference = 'Stop'
+Start-Transcript -Path 'C:\bootstrap.log' -Append
 
 # --- Set hostname ---
 $currentName = $env:COMPUTERNAME
-$targetName  = "${hostname}"
+$targetName  = '${hostname}'
 
 if ($currentName -ne $targetName) {
     Rename-Computer -NewName $targetName -Force
-    Write-Output "Hostname set to $targetName"
+    Write-Output ('Hostname set to ' + $targetName)
 }
 
 # --- Initialize the NTDS data disk (D:) ---
@@ -25,35 +25,37 @@ $disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' -and $_.Size -gt 1
 if ($disk) {
     Initialize-Disk -Number $disk.Number -PartitionStyle GPT -Confirm:$false
     $partition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -DriveLetter D
-    Format-Volume -DriveLetter D -FileSystem NTFS -NewFileSystemLabel "NTDS" -Confirm:$false
-    Write-Output "NTDS volume initialized as D:"
+    Format-Volume -DriveLetter D -FileSystem NTFS -NewFileSystemLabel 'NTDS' -Confirm:$false
+    Write-Output 'NTDS volume initialized as D:'
 } else {
-    Write-Output "No raw disk found — NTDS volume may already be initialized."
+    Write-Output 'No raw disk found - NTDS volume may already be initialized.'
 }
 
 # --- Enable RDP ---
-Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-Write-Output "RDP enabled."
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+Write-Output 'RDP enabled.'
 
 # --- Install AD DS and DNS roles ---
 Install-WindowsFeature -Name AD-Domain-Services, DNS -IncludeManagementTools
-Write-Output "AD DS and DNS roles installed."
+Write-Output 'AD DS and DNS roles installed.'
 
 # --- Promote to Domain Controller (new forest) ---
-$dsrmPassword = ConvertTo-SecureString '${dsrm_password}' -AsPlainText -Force
+$dsrmPasswordBase64 = '${dsrm_password_base64}'
+$dsrmPasswordPlain  = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($dsrmPasswordBase64))
+$dsrmPassword       = ConvertTo-SecureString $dsrmPasswordPlain -AsPlainText -Force
 
 Install-ADDSForest `
-    -DomainName "${domain_name}" `
-    -DomainNetbiosName "${domain_netbios}" `
+    -DomainName '${domain_name}' `
+    -DomainNetbiosName '${domain_netbios}' `
     -SafeModeAdministratorPassword $dsrmPassword `
-    -DatabasePath "D:\NTDS" `
-    -LogPath "D:\NTDS" `
-    -SysvolPath "D:\SYSVOL" `
+    -DatabasePath 'D:\NTDS' `
+    -LogPath 'D:\NTDS' `
+    -SysvolPath 'D:\SYSVOL' `
     -InstallDns:$true `
     -NoRebootOnCompletion:$false `
     -Force:$true
 
-Write-Output "DC promotion initiated. Machine will reboot automatically."
+Write-Output 'DC promotion initiated. Machine will reboot automatically.'
 Stop-Transcript
 </powershell>

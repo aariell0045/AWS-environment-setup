@@ -62,10 +62,10 @@ resource "aws_instance" "dc" {
   }
 
   user_data = templatefile("${path.module}/scripts/bootstrap-winrm.ps1", {
-    hostname       = var.dc_hostname
-    domain_name    = var.domain_name
-    domain_netbios = var.domain_netbios
-    dsrm_password  = random_password.dsrm.result
+    hostname              = var.dc_hostname
+    domain_name           = var.domain_name
+    domain_netbios        = var.domain_netbios
+    dsrm_password_base64  = base64encode(random_password.dsrm.result)
   })
 
   tags = {
