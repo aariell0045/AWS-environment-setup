@@ -21,6 +21,10 @@ domain_name    = "ds.team"
 domain_netbios = "DS"
 dc_hostname    = "lab-DC1"
 
+# Domain Administrator password — this is the password you use to RDP into the DC
+# The DHCP server uses it to join the domain
+domain_admin_password = "Aa123456"
+
 # --- EC2 ---
 dc_instance_type = "t3.small"     # 2 vCPU, 2 GB — sufficient for lab/learning
 ntds_volume_size = 10

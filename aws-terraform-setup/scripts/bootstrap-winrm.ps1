@@ -15,6 +15,36 @@ Start-Transcript -Path $logFile -Append
 if (Test-Path $phaseFile) {
     Write-Output '=== Phase 2: Promoting to Domain Controller ==='
 
+    # Skip promotion if already a DC, but create domain admin user if needed
+    try {
+        Get-ADDomainController -ErrorAction Stop
+        Write-Output 'Already a Domain Controller.'
+
+        # Create ds-admin user if it does not exist
+        try {
+            Get-ADUser -Identity 'ds-admin' -ErrorAction Stop
+            Write-Output 'ds-admin user already exists.'
+        } catch {
+            $userPass = ConvertTo-SecureString '${domain_admin_password}' -AsPlainText -Force
+            New-ADUser `
+                -Name 'ds-admin' `
+                -SamAccountName 'ds-admin' `
+                -UserPrincipalName 'ds-admin@${domain_name}' `
+                -AccountPassword $userPass `
+                -Enabled $true `
+                -PasswordNeverExpires $true
+            Add-ADGroupMember -Identity 'Domain Admins' -Members 'ds-admin'
+            Write-Output 'ds-admin user created and added to Domain Admins.'
+        }
+
+        Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
+        Remove-Item 'C:\bootstrap-phase2.ps1' -Force -ErrorAction SilentlyContinue
+        Stop-Transcript
+        exit 0
+    } catch {
+        Write-Output 'Not yet a DC. Proceeding with promotion.'
+    }
+
     # Wait for D: drive to be ready
     $retries = 0
     while (-not (Test-Path 'D:\') -and $retries -lt 30) {
@@ -52,6 +82,10 @@ if (Test-Path $phaseFile) {
         -InstallDns:$true `
         -NoRebootOnCompletion:$false `
         -Force:$true
+
+    # Clean up scheduled task and phase 2 script
+    Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
+    Remove-Item 'C:\bootstrap-phase2.ps1' -Force -ErrorAction SilentlyContinue
 
     Write-Output 'DC promotion complete. Machine will reboot.'
     Stop-Transcript

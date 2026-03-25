@@ -40,6 +40,12 @@ variable "dc_hostname" {
   default     = "DC01"
 }
 
+variable "domain_admin_password" {
+  description = "Password for the domain Administrator account (used for domain join)"
+  type        = string
+  sensitive   = true
+}
+
 # --- Deployment toggle ---
 
 variable "instance_enabled" {

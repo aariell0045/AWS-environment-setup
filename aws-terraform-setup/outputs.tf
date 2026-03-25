@@ -18,6 +18,36 @@ output "dc_public_ip" {
   value       = aws_instance.dc.public_ip
 }
 
+output "dhcp_instance_id" {
+  description = "DHCP server EC2 instance ID"
+  value       = aws_instance.dhcp.id
+}
+
+output "dhcp_public_ip" {
+  description = "Public IP of the DHCP server (use this for RDP)"
+  value       = aws_instance.dhcp.public_ip
+}
+
+output "dfs_instance_id" {
+  description = "DFS server EC2 instance ID"
+  value       = aws_instance.dfs.id
+}
+
+output "dfs_public_ip" {
+  description = "Public IP of the DFS server (use this for RDP)"
+  value       = aws_instance.dfs.public_ip
+}
+
+output "mgmt_instance_id" {
+  description = "Management server EC2 instance ID"
+  value       = aws_instance.mgmt.id
+}
+
+output "mgmt_public_ip" {
+  description = "Public IP of the management server (use this for RDP)"
+  value       = aws_instance.mgmt.public_ip
+}
+
 output "dc_hostname" {
   description = "Windows hostname"
   value       = var.dc_hostname
