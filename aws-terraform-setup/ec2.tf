@@ -66,7 +66,7 @@ resource "aws_instance" "dc" {
     domain_name            = var.domain_name
     domain_netbios         = var.domain_netbios
     dsrm_password_base64   = base64encode(random_password.dsrm.result)
-    domain_admin_password  = var.domain_admin_password
+    domain_admin_password_base64  = base64encode(var.domain_admin_password)
   })
 
   tags = {

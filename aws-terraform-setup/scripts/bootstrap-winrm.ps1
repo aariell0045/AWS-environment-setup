@@ -20,23 +20,6 @@ if (Test-Path $phaseFile) {
         Get-ADDomainController -ErrorAction Stop
         Write-Output 'Already a Domain Controller.'
 
-        # Create ds-admin user if it does not exist
-        try {
-            Get-ADUser -Identity 'ds-admin' -ErrorAction Stop
-            Write-Output 'ds-admin user already exists.'
-        } catch {
-            $userPass = ConvertTo-SecureString '${domain_admin_password}' -AsPlainText -Force
-            New-ADUser `
-                -Name 'ds-admin' `
-                -SamAccountName 'ds-admin' `
-                -UserPrincipalName 'ds-admin@${domain_name}' `
-                -AccountPassword $userPass `
-                -Enabled $true `
-                -PasswordNeverExpires $true
-            Add-ADGroupMember -Identity 'Domain Admins' -Members 'ds-admin'
-            Write-Output 'ds-admin user created and added to Domain Admins.'
-        }
-
         Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
         Remove-Item 'C:\bootstrap-phase2.ps1' -Force -ErrorAction SilentlyContinue
         Stop-Transcript
@@ -80,15 +63,16 @@ if (Test-Path $phaseFile) {
         -LogPath 'D:\NTDS' `
         -SysvolPath 'D:\SYSVOL' `
         -InstallDns:$true `
-        -NoRebootOnCompletion:$false `
+        -NoRebootOnCompletion:$true `
         -Force:$true
 
-    # Clean up scheduled task and phase 2 script
-    Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
-    Remove-Item 'C:\bootstrap-phase2.ps1' -Force -ErrorAction SilentlyContinue
-
-    Write-Output 'DC promotion complete. Machine will reboot.'
+    # IMPORTANT:
+    # Keep the startup task + phase2 script for one more boot so we can:
+    # - verify the box is a DC
+    # The "already a Domain Controller" branch above will perform cleanup.
+    Write-Output 'DC promotion complete. Rebooting (post-promotion tasks will run on next startup).'
     Stop-Transcript
+    Restart-Computer -Force
     exit 0
 }
 
@@ -104,6 +88,17 @@ $targetName  = '${hostname}'
 if ($currentName -ne $targetName) {
     Rename-Computer -NewName $targetName -Force
     Write-Output ('Hostname set to ' + $targetName)
+}
+
+# Set the local Administrator password to the desired domain password.
+# After AD DS promotion, this becomes the domain Administrator password.
+$domainAdminBase64 = '${domain_admin_password_base64}'
+$domainAdminPlain  = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($domainAdminBase64))
+try {
+    & net user Administrator $domainAdminPlain | Out-Null
+    Write-Output 'Local Administrator password set.'
+} catch {
+    Write-Output ('WARNING: Failed to set local Administrator password: ' + $_.Exception.Message)
 }
 
 # Initialize the NTDS data disk (D:)
