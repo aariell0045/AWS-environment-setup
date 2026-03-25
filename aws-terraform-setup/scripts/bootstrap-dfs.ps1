@@ -30,10 +30,26 @@ if (Test-Path $phaseFile) {
     Set-DnsClientServerAddress -InterfaceIndex $adapter.InterfaceIndex -ServerAddresses $dcIp
     Write-Output ('DNS set to DC at ' + $dcIp)
 
+    # Wait for the DC/domain to be reachable (DC may still be promoting)
+    $maxAttempts = 60
+    for ($i = 1; $i -le $maxAttempts; $i++) {
+        try {
+            $dc = (Resolve-DnsName -Name ("_ldap._tcp.dc._msdcs.${domain_name}") -Type SRV -ErrorAction Stop | Select-Object -First 1)
+            Write-Output ("DC locator SRV resolved: " + $dc.NameTarget)
+            break
+        } catch {
+            Write-Output ("Waiting for domain DNS records... attempt " + $i + "/" + $maxAttempts)
+            Start-Sleep -Seconds 10
+        }
+        if ($i -eq $maxAttempts) {
+            throw "Domain DNS records not available after waiting; cannot join domain."
+        }
+    }
+
     # Join the domain
     $domainAdminBase64 = '${domain_admin_password_base64}'
     $domainAdminPlain  = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($domainAdminBase64))
-    $cred = New-Object System.Management.Automation.PSCredential('${domain_netbios}\Administrator', (ConvertTo-SecureString $domainAdminPlain -AsPlainText -Force))
+    $cred = New-Object System.Management.Automation.PSCredential('${domain_netbios}\ds-admin', (ConvertTo-SecureString $domainAdminPlain -AsPlainText -Force))
 
     Add-Computer -DomainName '${domain_name}' -Credential $cred -Force
     Write-Output 'Joined domain ${domain_name}.'
