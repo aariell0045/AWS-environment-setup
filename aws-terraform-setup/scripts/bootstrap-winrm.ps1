@@ -20,6 +20,30 @@ if (Test-Path $phaseFile) {
         Get-ADDomainController -ErrorAction Stop
         Write-Output 'Already a Domain Controller.'
 
+        # Create ds-admin domain admin user if it does not exist
+        try {
+            Get-ADUser -Identity 'ds-admin' -ErrorAction Stop
+            Write-Output 'ds-admin user already exists.'
+        } catch {
+            $domainAdminBase64 = '${domain_admin_password_base64}'
+            $domainAdminPlain  = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($domainAdminBase64))
+            $secPass = ConvertTo-SecureString $domainAdminPlain -AsPlainText -Force
+
+            New-ADUser `
+                -Name 'ds-admin' `
+                -SamAccountName 'ds-admin' `
+                -UserPrincipalName ('ds-admin@${domain_name}') `
+                -AccountPassword $secPass `
+                -Enabled $true `
+                -PasswordNeverExpires $true `
+                -ChangePasswordAtLogon $false `
+                -Description 'Domain admin account for lab management'
+
+            Add-ADGroupMember -Identity 'Domain Admins' -Members 'ds-admin'
+            Add-ADGroupMember -Identity 'Enterprise Admins' -Members 'ds-admin'
+            Write-Output 'ds-admin user created and added to Domain Admins and Enterprise Admins.'
+        }
+
         Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
         Remove-Item 'C:\bootstrap-phase2.ps1' -Force -ErrorAction SilentlyContinue
         Stop-Transcript

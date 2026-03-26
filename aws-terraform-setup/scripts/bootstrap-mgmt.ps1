@@ -32,7 +32,8 @@ if (Test-Path $phaseFile) {
     Write-Output ('DNS set to DC at ' + $dcIp)
 
     # Wait for the DC/domain to be reachable (DC may still be promoting)
-    $maxAttempts = 60
+    # DC needs ~15-20 min: Phase 1 install + reboot + Phase 2 promote + reboot + final verify
+    $maxAttempts = 120
     for ($i = 1; $i -le $maxAttempts; $i++) {
         try {
             $dc = (Resolve-DnsName -Name ("_ldap._tcp.dc._msdcs.${domain_name}") -Type SRV | Where-Object { $_.NameTarget } | Select-Object -First 1)
@@ -43,20 +44,34 @@ if (Test-Path $phaseFile) {
             throw "SRV query returned no NameTarget"
         } catch {
             Write-Output ("Waiting for domain DNS records... attempt " + $i + "/" + $maxAttempts)
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 15
         }
         if ($i -eq $maxAttempts) {
             throw "Domain DNS records not available after waiting; cannot join domain."
         }
     }
 
-    # Join the domain
+    # Extra wait for DC services to fully stabilize after DNS is available
+    Write-Output 'DNS resolved. Waiting 60s for DC services to stabilize...'
+    Start-Sleep -Seconds 60
+
+    # Join the domain (with retries — DC may not be fully ready even after DNS resolves)
     $domainAdminBase64 = '${domain_admin_password_base64}'
     $domainAdminPlain  = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($domainAdminBase64))
     $cred = New-Object System.Management.Automation.PSCredential('${domain_netbios}\Administrator', (ConvertTo-SecureString $domainAdminPlain -AsPlainText -Force))
 
-    Add-Computer -DomainName '${domain_name}' -Credential $cred -Force -ErrorAction Stop
-    Write-Output 'Joined domain ${domain_name}.'
+    $joinMaxRetries = 10
+    for ($j = 1; $j -le $joinMaxRetries; $j++) {
+        try {
+            Add-Computer -DomainName '${domain_name}' -Credential $cred -Force -ErrorAction Stop
+            Write-Output 'Joined domain ${domain_name}.'
+            break
+        } catch {
+            Write-Output ("Domain join attempt " + $j + "/" + $joinMaxRetries + " failed: " + $_.Exception.Message)
+            if ($j -eq $joinMaxRetries) { throw }
+            Start-Sleep -Seconds 30
+        }
+    }
 
     # Clean up
     Unregister-ScheduledTask -TaskName 'BootstrapPhase2' -Confirm:$false -ErrorAction SilentlyContinue
