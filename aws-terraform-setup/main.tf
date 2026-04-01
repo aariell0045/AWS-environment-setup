@@ -12,14 +12,16 @@ terraform {
     }
   }
 
-  # Uncomment for remote state — make sure the S3 bucket exists
-  # and has encryption enabled (SCP requirement)
-  # backend "s3" {
-  #   bucket  = "my-tf-state"
-  #   key     = "dc-deploy/terraform.tfstate"
-  #   region  = "il-central-1"
-  #   encrypt = true
-  # }
+  backend "s3" {
+    # Override any of these at init time:
+    #   terraform init -backend-config="bucket=<your-bucket>" \
+    #                  -backend-config="dynamodb_table=<your-table>"
+    bucket         = "my-tf-state"
+    key            = "ad-lab/terraform.tfstate"
+    region         = "il-central-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
 }
 
 provider "aws" {
