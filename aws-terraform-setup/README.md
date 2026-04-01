@@ -37,6 +37,45 @@ Member servers automatically wait up to 30 minutes for the DC to finish promotin
 1. Horizon account with admin permissions
 2. AWS CLI v2 configured for `il-central-1`
 3. A key pair in `il-central-1` (optional, for initial password decryption)
+4. S3 bucket + DynamoDB table for remote state (see below)
+
+## Remote State
+
+Terraform state is stored remotely in S3 with DynamoDB locking to prevent concurrent-run corruption.
+**Create the backend resources once before your first `terraform init`:**
+
+```bash
+# Create the S3 bucket (versioning + encryption required by SCP)
+aws s3api create-bucket \
+  --bucket my-tf-state \
+  --region il-central-1 \
+  --create-bucket-configuration LocationConstraint=il-central-1
+
+aws s3api put-bucket-versioning \
+  --bucket my-tf-state \
+  --versioning-configuration Status=Enabled
+
+aws s3api put-bucket-encryption \
+  --bucket my-tf-state \
+  --server-side-encryption-configuration \
+    '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+# Create the DynamoDB lock table
+aws dynamodb create-table \
+  --table-name terraform-state-lock \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region il-central-1
+```
+
+To use a **different** bucket or table without editing `main.tf`, pass them at init time:
+
+```bash
+terraform init \
+  -backend-config="bucket=<your-bucket>" \
+  -backend-config="dynamodb_table=<your-table>"
+```
 
 ## Deploy
 
